@@ -5,44 +5,59 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
 import javafx.scene.control.Button;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import model.Achat;
+import javafx.util.StringConverter;
 import model.Fournisseur;
 import model.BDD;
 
 public class FormulaireAchatController {
-	
-	private Connection connexion;
+
+    private Connection connexion;
 
     @FXML private TextField numeroField;
     @FXML private ComboBox<Fournisseur> fournisseurComboBox;
-    @FXML private TextField composantsField;
+    @FXML private ComboBox<String> composantsComboBox;
     @FXML private TextField prixField;
     @FXML private Button enregistrerButton;
+    @FXML private Button annulerButton;
+    @FXML private ListView<String> listViewComposants;
 
     @FXML
-    public void initialize() throws Exception {
-        
-        enregistrerButton.setOnAction(e -> {
-			try {
-				connexion = BDD.getConnection();
-				enregistrerAchat();
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		});
+    public void initialize() {
+        try {
+            connexion = BDD.getConnection();
+            if (connexion == null) {
+                throw new SQLException("Connexion à la base de données échouée.");
+            }
+            recupererNumero();
+            chargerFournisseurs();
+            selectionnerComposant();
+
+            enregistrerButton.setOnAction(e -> {
+                try {
+                    System.out.println("Achat fait");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    showAlert(AlertType.ERROR, "Erreur", "Une erreur est survenue lors de l'enregistrement.");
+                }
+            });
+
+            annulerButton.setOnAction(e -> reinitialiserFormulaire());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert(AlertType.ERROR, "Erreur", "Initialisation échouée.");
+        }
     }
-    
-    public void recupererNumero() throws SQLException {
+
+    public void recupererNumero() {
         String query = "SELECT MAX(numero) AS max_numero FROM achat";
         try (Statement stmt = connexion.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
             if (rs.next()) {
@@ -53,53 +68,85 @@ public class FormulaireAchatController {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            showAlert(AlertType.ERROR, "Erreur", "Impossible de récupérer le numéro.");
         }
     }
 
-    
-    private void enregistrerAchat() throws Exception {
-        int numero = Integer.parseInt(numeroField.getText());
-        Fournisseur fournisseur = fournisseurComboBox.getValue();
-        String composantsString = composantsField.getText();  
-        double prix = Double.parseDouble(prixField.getText());
+    private void chargerFournisseurs() {
+        String query = "SELECT * FROM fournisseur";
+        try (Statement stmt = connexion.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String code = rs.getString("code");
+                String nom = rs.getString("nom");
+                String prenom = rs.getString("prenom");
+                String adresse = rs.getString("adresse");
 
-        if (composantsString.isEmpty() || prix <= 0 || fournisseur == null) {
-            Alert alert = new Alert(AlertType.ERROR, "Veuillez remplir tous les champs correctement.");
-            alert.showAndWait();
-            return;
-        }
-        
-        List<String> composants = new ArrayList<>();
-        String[] composantsArray = composantsString.split(","); 
-        for (String composant : composantsArray) {
-            composants.add(composant.trim()); 
-        }
+                fournisseurComboBox.getItems().add(new Fournisseur(id, code, nom, prenom, adresse));
+            }
 
-        Achat achat = new Achat(numero, composants, (int)prix, fournisseur.getNom());
+            fournisseurComboBox.setConverter(new StringConverter<Fournisseur>() {
+                @Override
+                public String toString(Fournisseur fournisseur) {
+                    return fournisseur != null ? fournisseur.getNom() + " " + fournisseur.getPrenom() + " (" + fournisseur.getCode() + ")" : "";
+                }
 
-        if (connexion == null) {
-            System.out.println("La connexion à la base de données n'a pas été initialisée.");
-            return;
-        }
+                @Override
+                public Fournisseur fromString(String string) {
+                    return null;
+                }
+            });
 
-        String query = "INSERT INTO achat (numero, composants, prix, status, fournisseurId) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connexion.prepareStatement(query)) {
-            ps.setInt(1, achat.getNumero()); 
-            ps.setString(2, String.join(",", composants)); 
-            ps.setDouble(3, achat.getPrix());
-            ps.setInt(4, 0);
-            ps.setString(5, fournisseur.getCode()); 
-            
-            ps.executeUpdate();
-            System.out.println("Achat ajouté avec succès.");
+            fournisseurComboBox.valueProperty().addListener((obs, oldFournisseur, newFournisseur) -> {
+                if (newFournisseur != null) {
+                    chargerComposantsPourFournisseur(newFournisseur);
+                    fournisseurComboBox.setDisable(true); 
+                }
+            });
+
         } catch (SQLException e) {
             e.printStackTrace();
+            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les fournisseurs.");
         }
-        Alert alert = new Alert(AlertType.INFORMATION, "Achat enregistré avec succès !");
-        alert.showAndWait();
-        
-        numeroField.getScene().getWindow().hide();
     }
 
-}
+    private void chargerComposantsPourFournisseur(Fournisseur fournisseur) {
+        String query = "SELECT produit, prix FROM produits WHERE fournisseurId = ?";
+        composantsComboBox.getItems().clear();
 
+        try (PreparedStatement ps = connexion.prepareStatement(query)) {
+            System.out.println(fournisseur.getId());
+            ps.setInt(1, fournisseur.getId());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    composantsComboBox.getItems().add(rs.getString("produit") + " - " + rs.getString("prix") + " €");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné.");
+        }
+    }
+    
+    private void selectionnerComposant() {
+    	composantsComboBox.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+    		   System.out.println(newValue);
+    		   listViewComposants.getItems().add(newValue);
+    	}); 
+    }
+
+    private void reinitialiserFormulaire() {
+        fournisseurComboBox.setDisable(false); 
+        fournisseurComboBox.getSelectionModel().clearSelection(); 
+        composantsComboBox.getItems().clear(); 
+        listViewComposants.getItems().clear(); 
+        prixField.clear(); 
+    }
+
+    private void showAlert(AlertType alertType, String title, String content) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+}

@@ -77,12 +77,13 @@ public class FournisseurController {
             List<Fournisseur> fournisseurs = new ArrayList<>();
 
             while (rs.next()) {
+            	int id = rs.getInt("id");
             	String code = rs.getString("code");
             	String nom = rs.getString("nom");
             	String prenom = rs.getString("prenom");
             	String adresse = rs.getString("adresse");
 
-                Fournisseur fournisseur = new Fournisseur(code, nom, prenom, adresse);
+                Fournisseur fournisseur = new Fournisseur(id, code, nom, prenom, adresse);
 
                 fournisseurs.add(fournisseur);
                 
