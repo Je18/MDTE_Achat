@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
@@ -110,30 +112,53 @@ public class FormulaireAchatController {
         }
     }
 
+    private Map<String, Integer> produitPrixMap = new HashMap<>();
+
     private void chargerComposantsPourFournisseur(Fournisseur fournisseur) {
-        String query = "SELECT produit, prix FROM produits WHERE fournisseurId = ?";
+        String query = "SELECT produit, prix FROM produits WHERE fournisseurId = ? AND qte != 0";
         composantsComboBox.getItems().clear();
+        produitPrixMap.clear();
 
         try (PreparedStatement ps = connexion.prepareStatement(query)) {
-            System.out.println(fournisseur.getId());
             ps.setInt(1, fournisseur.getId());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    composantsComboBox.getItems().add(rs.getString("produit") + " - " + rs.getString("prix") + " €");
+                    String produit = rs.getString("produit");
+                    int prix = rs.getInt("prix");
+                    composantsComboBox.getItems().add(produit);
+                    produitPrixMap.put(produit, prix);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné.");
+            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné");
         }
     }
-    
+
+
     private void selectionnerComposant() {
-    	composantsComboBox.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
-    		   System.out.println(newValue);
-    		   listViewComposants.getItems().add(newValue);
-    	}); 
+        composantsComboBox.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+            if (newValue != null && !listViewComposants.getItems().contains(newValue)) {
+                listViewComposants.getItems().add(newValue);
+
+                try {
+                    // Récupère le prix du produit sélectionné
+                    int produitPrix = produitPrixMap.getOrDefault(newValue, 0);
+
+                    // Vérifie si le champ prixField est vide ou non valide
+                    int currentPrice = prixField.getText().isEmpty() ? 0 : Integer.parseInt(prixField.getText());
+
+                    // Ajoute le prix du produit sélectionné au prix total
+                    prixField.setText(Integer.toString(currentPrice + produitPrix));
+                } catch (NumberFormatException e) {
+                    showAlert(Alert.AlertType.ERROR, "Erreur", "Le champ du prix contient une valeur invalide.");
+                    prixField.setText("0"); // Réinitialise à 0 en cas d'erreur
+                }
+            }
+        });
     }
+
+
 
     private void reinitialiserFormulaire() {
         fournisseurComboBox.setDisable(false); 
