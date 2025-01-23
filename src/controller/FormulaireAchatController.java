@@ -8,6 +8,8 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ComboBox;
@@ -30,6 +32,10 @@ public class FormulaireAchatController {
     @FXML private Button enregistrerButton;
     @FXML private Button annulerButton;
     @FXML private ListView<String> listViewComposants;
+    @FXML private Button btnAjouterProduit;
+
+    private ObservableList<String> produitsAjoutes = FXCollections.observableArrayList();
+    private Map<String, Integer> produitPrixMap = new HashMap<>();
 
     @FXML
     public void initialize() {
@@ -52,6 +58,16 @@ public class FormulaireAchatController {
             });
 
             annulerButton.setOnAction(e -> reinitialiserFormulaire());
+            
+            btnAjouterProduit.setOnAction(e -> {
+                try {
+                    ajouterProduitAListe();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "Erreur", "Une erreur s'est produite : " + ex.getMessage());
+                }
+            });
+
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -112,8 +128,6 @@ public class FormulaireAchatController {
         }
     }
 
-    private Map<String, Integer> produitPrixMap = new HashMap<>();
-
     private void chargerComposantsPourFournisseur(Fournisseur fournisseur) {
         String query = "SELECT produit, prix FROM produits WHERE fournisseurId = ? AND qte != 0";
         composantsComboBox.getItems().clear();
@@ -131,41 +145,70 @@ public class FormulaireAchatController {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné");
         }
     }
+    
+    @FXML
+    private void ajouterProduitAListe() {
+        String produitSelectionne = composantsComboBox.getValue();
 
+        if (produitSelectionne == null) {
+            showAlert(Alert.AlertType.WARNING, "Avertissement", "Veuillez sélectionner un produit avant de l'ajouter.");
+            return;
+        }
+
+        // Vérifiez si le produit est déjà dans la liste (doublons permis, mais avertir si nécessaire)
+        produitsAjoutes.add(produitSelectionne);
+        listViewComposants.setItems(produitsAjoutes);
+
+        // Mettre à jour le prix total
+        mettreAJourPrixTotal();
+    }
+
+    @FXML
+    private void supprimerProduitDeListe() {
+        String produitSelectionne = listViewComposants.getSelectionModel().getSelectedItem();
+
+        if (produitSelectionne == null) {
+            showAlert(Alert.AlertType.WARNING, "Avertissement", "Veuillez sélectionner un produit à supprimer.");
+            return;
+        }
+
+        produitsAjoutes.remove(produitSelectionne);
+        listViewComposants.setItems(produitsAjoutes);
+
+        // Mettre à jour le prix total
+        mettreAJourPrixTotal();
+    }
+
+    private void mettreAJourPrixTotal() {
+        int prixTotal = 0;
+
+        for (String produit : produitsAjoutes) {
+            prixTotal += produitPrixMap.getOrDefault(produit, 0);
+        }
+
+        prixField.setText(Integer.toString(prixTotal));
+    }
 
     private void selectionnerComposant() {
         composantsComboBox.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
-            if (newValue != null && !listViewComposants.getItems().contains(newValue)) {
-                listViewComposants.getItems().add(newValue);
-
-                try {
-                    // Récupère le prix du produit sélectionné
-                    int produitPrix = produitPrixMap.getOrDefault(newValue, 0);
-
-                    // Vérifie si le champ prixField est vide ou non valide
-                    int currentPrice = prixField.getText().isEmpty() ? 0 : Integer.parseInt(prixField.getText());
-
-                    // Ajoute le prix du produit sélectionné au prix total
-                    prixField.setText(Integer.toString(currentPrice + produitPrix));
-                } catch (NumberFormatException e) {
-                    showAlert(Alert.AlertType.ERROR, "Erreur", "Le champ du prix contient une valeur invalide.");
-                    prixField.setText("0"); // Réinitialise à 0 en cas d'erreur
-                }
+            if (newValue != null) {
+                composantsComboBox.getSelectionModel().clearSelection();
             }
         });
     }
 
-
-
     private void reinitialiserFormulaire() {
-        fournisseurComboBox.setDisable(false); 
-        fournisseurComboBox.getSelectionModel().clearSelection(); 
-        composantsComboBox.getItems().clear(); 
-        listViewComposants.getItems().clear(); 
-        prixField.clear(); 
+        fournisseurComboBox.setDisable(false);
+        fournisseurComboBox.getSelectionModel().clearSelection();
+        composantsComboBox.getItems().clear();
+        listViewComposants.getItems().clear();
+        produitsAjoutes.clear();
+        prixField.clear();
+        numeroField.clear();
+        recupererNumero();
     }
 
     private void showAlert(AlertType alertType, String title, String content) {
