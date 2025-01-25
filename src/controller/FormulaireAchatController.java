@@ -11,12 +11,7 @@ import java.util.Map;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.ListView;
-import javafx.scene.control.Button;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.*;
 import javafx.util.StringConverter;
 import model.Fournisseur;
 import model.BDD;
@@ -46,32 +41,14 @@ public class FormulaireAchatController {
             }
             recupererNumero();
             chargerFournisseurs();
-            selectionnerComposant();
 
-            enregistrerButton.setOnAction(e -> {
-                try {
-                    System.out.println("Achat fait");
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    showAlert(AlertType.ERROR, "Erreur", "Une erreur est survenue lors de l'enregistrement.");
-                }
-            });
-
+            enregistrerButton.setOnAction(e -> enregistrerAchat());
             annulerButton.setOnAction(e -> reinitialiserFormulaire());
-            
-            btnAjouterProduit.setOnAction(e -> {
-                try {
-                    ajouterProduitAListe();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    showAlert(Alert.AlertType.ERROR, "Erreur", "Une erreur s'est produite : " + ex.getMessage());
-                }
-            });
-
+            btnAjouterProduit.setOnAction(e -> ajouterProduitAListe());
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Initialisation échouée.");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Initialisation échouée : " + e.getMessage());
         }
     }
 
@@ -86,12 +63,13 @@ public class FormulaireAchatController {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Impossible de récupérer le numéro.");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de récupérer le numéro.");
         }
     }
 
     private void chargerFournisseurs() {
-        String query = "SELECT * FROM fournisseur";
+        String query = "SELECT * FROM fournisseur \r\n" + 
+        		"WHERE id IN (SELECT DISTINCT fournisseurId FROM produits)";
         try (Statement stmt = connexion.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 int id = rs.getInt("id");
@@ -124,12 +102,12 @@ public class FormulaireAchatController {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Impossible de charger les fournisseurs.");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger les fournisseurs.");
         }
     }
 
     private void chargerComposantsPourFournisseur(Fournisseur fournisseur) {
-        String query = "SELECT produit, prix FROM produits WHERE fournisseurId = ? AND qte != 0";
+        String query = "SELECT produit, prix, qte FROM produits WHERE fournisseurId = ? AND qte != 0";
         composantsComboBox.getItems().clear();
         produitPrixMap.clear();
 
@@ -139,16 +117,21 @@ public class FormulaireAchatController {
                 while (rs.next()) {
                     String produit = rs.getString("produit");
                     int prix = rs.getInt("prix");
-                    composantsComboBox.getItems().add(produit);
-                    produitPrixMap.put(produit, prix);
+                    int qte = rs.getInt("qte"); 
+
+                    String produitAvecQuantite = produit + " (" + qte + "u)";
+                    composantsComboBox.getItems().add(produitAvecQuantite);
+
+                    produitPrixMap.put(produitAvecQuantite, prix);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger les composants pour le fournisseur sélectionné.");
         }
     }
-    
+
+
     @FXML
     private void ajouterProduitAListe() {
         String produitSelectionne = composantsComboBox.getValue();
@@ -158,46 +141,21 @@ public class FormulaireAchatController {
             return;
         }
 
-        // Vérifiez si le produit est déjà dans la liste (doublons permis, mais avertir si nécessaire)
-        produitsAjoutes.add(produitSelectionne);
-        listViewComposants.setItems(produitsAjoutes);
-
-        // Mettre à jour le prix total
-        mettreAJourPrixTotal();
-    }
-
-    @FXML
-    private void supprimerProduitDeListe() {
-        String produitSelectionne = listViewComposants.getSelectionModel().getSelectedItem();
-
-        if (produitSelectionne == null) {
-            showAlert(Alert.AlertType.WARNING, "Avertissement", "Veuillez sélectionner un produit à supprimer.");
+        if (produitsAjoutes.contains(produitSelectionne)) {
+            showAlert(Alert.AlertType.WARNING, "Avertissement", "Le produit est déjà ajouté à la liste.");
             return;
         }
 
-        produitsAjoutes.remove(produitSelectionne);
+        produitsAjoutes.add(produitSelectionne);
         listViewComposants.setItems(produitsAjoutes);
-
-        // Mettre à jour le prix total
         mettreAJourPrixTotal();
     }
 
     private void mettreAJourPrixTotal() {
-        int prixTotal = 0;
-
-        for (String produit : produitsAjoutes) {
-            prixTotal += produitPrixMap.getOrDefault(produit, 0);
-        }
-
+        int prixTotal = produitsAjoutes.stream()
+                                       .mapToInt(produit -> produitPrixMap.getOrDefault(produit, 0))
+                                       .sum();
         prixField.setText(Integer.toString(prixTotal));
-    }
-
-    private void selectionnerComposant() {
-        composantsComboBox.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
-            if (newValue != null) {
-                composantsComboBox.getSelectionModel().clearSelection();
-            }
-        });
     }
 
     private void reinitialiserFormulaire() {
@@ -211,7 +169,17 @@ public class FormulaireAchatController {
         recupererNumero();
     }
 
-    private void showAlert(AlertType alertType, String title, String content) {
+    private void enregistrerAchat() {
+        try {
+            System.out.println("Achat enregistré.");
+            // Ajouter la logique d'enregistrement ici.
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Une erreur est survenue lors de l'enregistrement.");
+        }
+    }
+
+    private void showAlert(Alert.AlertType alertType, String title, String content) {
         Alert alert = new Alert(alertType);
         alert.setTitle(title);
         alert.setContentText(content);
