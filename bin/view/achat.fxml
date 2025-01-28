@@ -28,4 +28,5 @@
       </font>
    </Label>
    <Button fx:id="btnRefresh" layoutX="579.0" layoutY="482.0" onAction="#refresh" text="Rafraichir" />
+   <Button fx:id="btnImportCSV" layoutX="290.0" layoutY="482.0" onAction="#handleFTPImport" text="Import CSV" />
 </AnchorPane>

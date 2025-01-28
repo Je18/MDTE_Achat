@@ -11,6 +11,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import model.Achat;
 import model.BDD;
+import model.FTPService;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -46,13 +47,15 @@ public class AchatController {
     private Button btnAddAchat;
     @FXML
     private Button btnRefresh;
+    @FXML 
+    private Button btnImportCSV;
 
     public AchatController() {
         try {
             connexion = BDD.getConnection();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Erreur de connexion", "Impossible de se connecter à la base de données.");
+            showAlert(Alert.AlertType.ERROR, "Erreur de connexion", "Impossible de se connecter à la base de données.");
         }
     }
 
@@ -91,10 +94,9 @@ public class AchatController {
         loadAchats();
     }
 
-
     private void loadAchats() {
         if (connexion == null) {
-            showAlert("Erreur", "La connexion à la base de données n'est pas établie.");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "La connexion à la base de données n'est pas établie.");
             return;
         }
 
@@ -133,7 +135,7 @@ public class AchatController {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert("Erreur SQL", "Une erreur s'est produite lors de la récupération des achats : " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Erreur SQL", "Une erreur s'est produite lors de la récupération des achats : " + e.getMessage());
         }
     }
 
@@ -152,9 +154,36 @@ public class AchatController {
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger le formulaire d'ajout d'un achat");
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger le formulaire d'ajout d'un achat");
         }
     }
+    
+    @FXML
+	private void handleFTPImport() {
+	    FTPService ftpService = new FTPService();
+	    //ImportCSVDAO importCSVDAO = new ImportCSVDAO();
+
+	    String remoteFile = "/CCI/achat_stocks_manquants.csv";
+	    String localFile = "C:/Users/Eleve/Downloads/achat_stocks_manquants.csv"; 
+
+	    String downloadResult = ftpService.downloadCSV(remoteFile, localFile);
+	    if (!downloadResult.contains("succès")) {
+	    	showAlert(Alert.AlertType.ERROR, "Erreur FTP", "Impossible de télécharger le fichier.");
+	        return;
+	    } else {
+	    	showAlert(Alert.AlertType.INFORMATION ,"Succès", "Importation importé avec succès !");
+	    }
+
+	    //boolean importSuccess = importCSVDAO.importCSVToDatabase(localFile);
+
+
+//	    if (importSuccess) {
+//	    	showAlert("Succès", "Le fichier a été importé avec succès dans la base de données.");
+//	        loadAchats();
+//	    } else {
+//	    	showAlert("Erreur", "L'importation du fichier dans la base de données a échoué.");
+//	    }
+	}
 
     @FXML
     private void refresh() {
@@ -162,10 +191,10 @@ public class AchatController {
         achatsTable.refresh();
     }
 
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message);
+    private void showAlert(Alert.AlertType alertType, String title, String content) {
+        Alert alert = new Alert(alertType);
         alert.setTitle(title);
-        alert.setHeaderText(null);
+        alert.setContentText(content);
         alert.showAndWait();
     }
 }

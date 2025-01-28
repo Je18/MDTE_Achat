@@ -14,37 +14,37 @@ public class FTPService {
     private final String password = "cydeaxch0";
 
     public String downloadCSV(String remoteFilePath, String localFilePath) {
-        FTPClient ftpClient = new FTPClient();
-        try {
-            ftpClient.connect(server, port);
-            boolean login = ftpClient.login(user, password);
+	    FTPClient ftpClient = new FTPClient();
+	    try {
+	        ftpClient.connect(server, port);
+	        boolean login = ftpClient.login(user, password);
 
-            if (!login) {
-                return "Connexion FTP échouée.";
-            }
+	        if (!login) {
+	            return "Connexion FTP échoué.";
+	        }
 
-            ftpClient.enterLocalPassiveMode();
-            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+	        ftpClient.enterLocalPassiveMode();
+	        ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
-            try (FileOutputStream fos = new FileOutputStream(localFilePath)) {
-                boolean success = ftpClient.retrieveFile(remoteFilePath, fos);
-                if (success) {
-                    return "Fichier téléchargé avec succès.";
-                } else {
-                    return "Échec du téléchargement.";
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "Erreur lors du téléchargement : " + e.getMessage();
-        } finally {
-            try {
-                ftpClient.logout();
-                ftpClient.disconnect();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
+	        try (FileOutputStream fos = new FileOutputStream(localFilePath)) {
+	            boolean success = ftpClient.retrieveFile(remoteFilePath, fos);
+	            if (success) {
+	                return "Fichier téléchargé avec succès.";
+	            } else {
+	                return "Erreur lors du téléchargement";
+	            }
+	        }
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        return "Erreur lors du téléchargement : " + e.getMessage();
+	    } finally {
+	        try {
+	            ftpClient.logout();
+	            ftpClient.disconnect();
+	        } catch (IOException ex) {
+	            ex.printStackTrace();
+	        }
+	    }
+	}
 
 }
