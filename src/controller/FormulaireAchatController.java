@@ -1,5 +1,7 @@
 package controller;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -34,12 +36,12 @@ public class FormulaireAchatController {
     @FXML
     private Button annulerButton;
     @FXML
-    private ListView<Produits> listViewComposants;  // Liste des produits
+    private ListView<Produits> listViewComposants; 
     @FXML
     private Button btnAjouterProduit;
 
-    private ObservableList<Produits> produitsAjoutes = FXCollections.observableArrayList(); // Liste des produits ajoutés
-    private Map<String, Produits> produitMap = new HashMap<>();  // Map pour stocker les produits avec leur nom
+    private ObservableList<Produits> produitsAjoutes = FXCollections.observableArrayList();
+    private Map<String, Produits> produitMap = new HashMap<>();
 
     @FXML
     public void initialize() {
@@ -194,64 +196,79 @@ public class FormulaireAchatController {
         }
     }
 
-    private void enregistrerAchat() {
+    public void enregistrerAchat() {
+    	Fournisseur fournisseur = fournisseurComboBox.getValue();
+    	String numero = numeroField.getText();
+    	String prix = prixField.getText();
+    	Map<Integer, Integer> produitQuantiteMap = new HashMap<>();
+    	String composants = "";
+    	
+    	String insertQuery = "INSERT INTO achat (numero, composants, prix, status, fournisseurId) VALUES (?, ?, ?, ?, ?)";
+        String updateProduitQuery = "UPDATE produits SET qte = qte - ? WHERE id = ? AND qte >= ?";
+
         if (produitsAjoutes.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Veuillez ajouter au moins un produit.");
             return;
         }
 
-        Fournisseur fournisseur = fournisseurComboBox.getValue();
         if (fournisseur == null) {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Veuillez sélectionner un fournisseur.");
             return;
         }
 
-        String numero = numeroField.getText();
         if (numero == null || numero.trim().isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Le numéro de l'achat est manquant.");
             return;
         }
 
-        String prix = prixField.getText();
         if (prix == null || prix.trim().isEmpty() || !prix.matches("\\d+")) {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Le prix total est invalide.");
             return;
         }
 
-        Map<Integer, Integer> produitQuantiteMap = new HashMap<>();
         for (Produits produit : produitsAjoutes) {
-            int id = produit.getId();  
-            produitQuantiteMap.put(id, produitQuantiteMap.getOrDefault(id, 0) + 1);
+            int id = produit.getId(); 
+
+            if (produitQuantiteMap.containsKey(id)) {
+                int quantiteActuelle = produitQuantiteMap.get(id);
+                produitQuantiteMap.put(id, quantiteActuelle + 1);
+            } else {
+                produitQuantiteMap.put(id, 1);
+            }
         }
 
-        StringBuilder composantsBuilder = new StringBuilder();
         for (Map.Entry<Integer, Integer> entry : produitQuantiteMap.entrySet()) {
-            composantsBuilder.append(entry.getKey()).append("(").append(entry.getValue()).append("),");
+            composants += entry.getKey() + "(" + entry.getValue() + "),";
         }
-        String composants = composantsBuilder.toString().replaceAll(", $", "");
 
-        String insertQuery = "INSERT INTO achat (numero, composants, prix, status, fournisseurId) VALUES (?, ?, ?, ?, ?)";
-        String updateProduitQuery = "UPDATE produits SET qte = qte - ? WHERE id = ? AND qte >= ?";
+        if (!composants.isEmpty()) {
+            composants = composants.substring(0, composants.length() - 1);
+        }
 
         try (PreparedStatement insertPs = connexion.prepareStatement(insertQuery);
              PreparedStatement updatePs = connexion.prepareStatement(updateProduitQuery)) {
 
             insertPs.setInt(1, Integer.parseInt(numero));
-            insertPs.setString(2, composants); 
+            insertPs.setString(2, composants);
             insertPs.setInt(3, Integer.parseInt(prix));
             insertPs.setInt(4, 0); 
             insertPs.setInt(5, fournisseur.getId());
 
             int rowsAffected = insertPs.executeUpdate();
             if (rowsAffected > 0) {
-                for (Map.Entry<Integer, Integer> entry : produitQuantiteMap.entrySet()) {
-                    int produitId = entry.getKey();  
-                    int quantite = entry.getValue();
-
-                    updatePs.setInt(1, quantite);
-                    updatePs.setInt(2, produitId); 
-                    updatePs.setInt(3, quantite);
-                    updatePs.executeUpdate();
+                try (FileWriter writer = new FileWriter("StocksRecues.csv")) {
+                    for (Map.Entry<Integer, Integer> entry : produitQuantiteMap.entrySet()) {
+                        int produitId = entry.getKey();  
+                        int quantite = entry.getValue();
+                        writer.write(produitId + "," + quantite + "\n");
+                        
+                        updatePs.setInt(1, quantite);
+                        updatePs.setInt(2, produitId); 
+                        updatePs.setInt(3, quantite);
+                        updatePs.executeUpdate();
+                    }
+                } catch (IOException e) {
+                    showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de créer le fichier CSV : " + e.getMessage());
                 }
 
                 showAlert(Alert.AlertType.INFORMATION, "Succès", "L'achat a été enregistré et les quantités mises à jour.");
