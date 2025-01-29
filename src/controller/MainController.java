@@ -9,8 +9,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import model.BDD;
 import model.Produits;
+import service.BDD;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -54,7 +54,7 @@ public class MainController {
             connexion = BDD.getConnection();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Erreur de connexion", "Impossible de se connecter à la base de données.");
+            showAlert(Alert.AlertType.ERROR,"Erreur de connexion", "Impossible de se connecter à la base de données.");
         }
     }
 
@@ -64,7 +64,7 @@ public class MainController {
         produitColumn.setCellValueFactory(new PropertyValueFactory<>("produit"));
         prixColumn.setCellValueFactory(new PropertyValueFactory<>("prix"));
         qteColumn.setCellValueFactory(new PropertyValueFactory<>("qte"));
-        fournisseurColumn.setCellValueFactory(new PropertyValueFactory<>("fournisseurNomPrenom"));
+        fournisseurColumn.setCellValueFactory(new PropertyValueFactory<>("fournisseurIdentité"));
         
         prixColumn.setCellFactory(new Callback<TableColumn<Produits, Integer>, TableCell<Produits, Integer>>() {
             @Override
@@ -111,15 +111,15 @@ public class MainController {
 
     private void loadProduits() {
         if (connexion == null) {
-            showAlert("Erreur", "La connexion à la base de données n'est pas établie.");
+            showAlert(Alert.AlertType.ERROR,"Erreur", "La connexion à la base de données n'est pas établie.");
             return;
         }
 
         String query =
                 "SELECT produits.*, " +
-                "CONCAT(fournisseur.nom, ' ', fournisseur.prenom) AS fournisseur_nom_prenom " +
+                "CONCAT(fournisseur.nom, ' ', fournisseur.prenom) AS fournisseurIdentité " +
                 "FROM produits " +
-                "JOIN fournisseur ON produits.fournisseurId = fournisseur.id ORDER BY produits.qte DESC";
+                "JOIN fournisseur ON produits.fournisseurId = fournisseur.id ORDER BY produits.prix ASC";
 
         try (Statement stmt = connexion.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
             List<Produits> produits = new ArrayList<>();
@@ -131,11 +131,11 @@ public class MainController {
                 int prix = rs.getInt("prix");
                 int qte = rs.getInt("qte");
                 int fournisseurID = rs.getInt("fournisseurId");
-                String fournisseurNomPrenom = rs.getString("fournisseur_nom_prenom");
+                String fournisseurIdentité = rs.getString("fournisseurIdentité");
 
                 Produits produit = new Produits(id, type, prod, prix, qte, fournisseurID);
 
-                produit.setFournisseurNomPrenom(fournisseurNomPrenom);
+                produit.setFournisseurIdentité(fournisseurIdentité);
 
                 produits.add(produit);
                 
@@ -146,7 +146,7 @@ public class MainController {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert("Erreur SQL", "Une erreur s'est produite lors de la récupération des produits");
+            showAlert(Alert.AlertType.ERROR,"Erreur SQL", "Une erreur s'est produite lors de la récupération des produits");
         }
     }
     
@@ -165,7 +165,7 @@ public class MainController {
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger le formulaire d'ajout de fournisseur.");
+            showAlert(Alert.AlertType.ERROR,"Erreur", "Impossible de charger le formulaire d'ajout de fournisseur.");
         }
     }
     
@@ -184,22 +184,20 @@ public class MainController {
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger le formulaire d'ajout d'achat.");
+            showAlert(Alert.AlertType.ERROR,"Erreur", "Impossible de charger le formulaire d'ajout d'achat.");
         }
     }
     
     @FXML
     private void refresh() throws SQLException {
         loadProduits();
-        
         produitsTable.refresh();
     }
 
-
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message);
+    private void showAlert(Alert.AlertType alertType, String title, String content) {
+        Alert alert = new Alert(alertType);
         alert.setTitle(title);
-        alert.setHeaderText(null);
+        alert.setContentText(content);
         alert.showAndWait();
     }
 }

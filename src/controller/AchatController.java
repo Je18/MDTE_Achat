@@ -10,9 +10,10 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import model.Achat;
-import model.BDD;
-import model.FTPService;
-import Service.CSV;
+import model.Produits;
+import service.BDD;
+import service.CSV;
+import service.FTPService;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -87,6 +88,22 @@ public class AchatController {
                             	setText("Envoyé");
                                 setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
                             }
+                        }
+                    }
+                };
+            }
+        });
+        prixColumn.setCellFactory(new Callback<TableColumn<Achat, Integer>, TableCell<Achat, Integer>>() {
+            @Override
+            public TableCell<Achat, Integer> call(TableColumn<Achat, Integer> param) {
+                return new TableCell<Achat, Integer>() {
+                    @Override
+                    protected void updateItem(Integer item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                        } else {
+                            setText(item + " €");
                         }
                     }
                 };

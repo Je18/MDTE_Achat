@@ -15,7 +15,7 @@ import javafx.scene.control.*;
 import javafx.util.StringConverter;
 import model.Fournisseur;
 import model.Produits;
-import model.BDD;
+import service.BDD;
 
 public class FormulaireAchatController {
 

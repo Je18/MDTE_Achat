@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Achat {
     private int numero;
-    private List<String> composants; // Liste des composants
+    private List<String> composants;
     private int prix;
     private String status;
 
@@ -25,7 +25,7 @@ public class Achat {
     }
 
     public String getComposantsAsString() {
-        return String.join(", ", composants); // Convertir la liste en une chaîne
+        return String.join(",", composants); 
     }
 
     public int getPrix() {

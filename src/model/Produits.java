@@ -7,7 +7,7 @@ public class Produits {
 	public int prix;
 	public int qte;
 	public int fournisseurID;
-	private String fournisseurNomPrenom;
+	private String fournisseurIdentité;
 	
 	
 	public Produits(int id, String type, String produit, int prix, int qte, int fournisseurID) {
@@ -67,12 +67,12 @@ public class Produits {
 		this.fournisseurID = fournisseurID;
 	}
 
-	public String getFournisseurNomPrenom() {
-        return fournisseurNomPrenom;
+	public String getFournisseurIdentité() {
+        return fournisseurIdentité;
     }
 
-    public void setFournisseurNomPrenom(String fournisseurNomPrenom) {
-        this.fournisseurNomPrenom = fournisseurNomPrenom;
+    public void setFournisseurIdentité(String fournisseurIdentité) {
+        this.fournisseurIdentité = fournisseurIdentité;
     }
 	
 	
