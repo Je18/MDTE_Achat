@@ -12,6 +12,7 @@ import javafx.scene.control.TableView;
 import model.Achat;
 import model.BDD;
 import model.FTPService;
+import Service.CSV;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -80,10 +81,10 @@ public class AchatController {
                             setText(item);
 
                             if ("0".equals(item)) {
-                            	setText("•");
+                            	setText("En attente");
                                 setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
                             } else if("1".equals(item)){
-                            	setText("•");
+                            	setText("Envoyé");
                                 setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
                             }
                         }
@@ -161,10 +162,10 @@ public class AchatController {
     @FXML
 	private void handleFTPImport() {
 	    FTPService ftpService = new FTPService();
-	    //ImportCSVDAO importCSVDAO = new ImportCSVDAO();
+	    CSV importCSV = new CSV(connexion);
 
-	    String remoteFile = "/CCI/achat_stocks_manquants.csv";
-	    String localFile = "C:/Users/Eleve/Downloads/achat_stocks_manquants.csv"; 
+	    String remoteFile = "/CCI/StockManquantAchat.csv";
+	    String localFile = "C:/Users/Eleve/Downloads/StockManquantAchat.csv"; 
 
 	    String downloadResult = ftpService.downloadCSV(remoteFile, localFile);
 	    if (!downloadResult.contains("succès")) {
@@ -174,15 +175,15 @@ public class AchatController {
 	    	showAlert(Alert.AlertType.INFORMATION ,"Succès", "Importation importé avec succès !");
 	    }
 
-	    //boolean importSuccess = importCSVDAO.importCSVToDatabase(localFile);
+	    boolean importSuccess = importCSV.importCSVToDatabase(localFile);
 
 
-//	    if (importSuccess) {
-//	    	showAlert("Succès", "Le fichier a été importé avec succès dans la base de données.");
-//	        loadAchats();
-//	    } else {
-//	    	showAlert("Erreur", "L'importation du fichier dans la base de données a échoué.");
-//	    }
+	    if (importSuccess) {
+	    	showAlert(Alert.AlertType.INFORMATION, "Succès", "Le fichier a été importé avec succès dans la base de données.");
+	        loadAchats();
+	    } else {
+	    	showAlert(Alert.AlertType.ERROR, "Erreur", "L'importation du fichier dans la base de données a échoué.");
+	    }
 	}
 
     @FXML

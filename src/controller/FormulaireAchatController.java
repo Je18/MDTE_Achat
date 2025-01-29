@@ -226,7 +226,7 @@ public class FormulaireAchatController {
 
         StringBuilder composantsBuilder = new StringBuilder();
         for (Map.Entry<Integer, Integer> entry : produitQuantiteMap.entrySet()) {
-            composantsBuilder.append(entry.getKey()).append(" (").append(entry.getValue()).append("), ");
+            composantsBuilder.append(entry.getKey()).append("(").append(entry.getValue()).append("),");
         }
         String composants = composantsBuilder.toString().replaceAll(", $", "");
 
