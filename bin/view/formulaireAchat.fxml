@@ -22,11 +22,11 @@
         <TextField fx:id="prixField" disable="true" editable="false" layoutX="128.0" layoutY="99.0" />
         
         <Button fx:id="enregistrerButton" layoutX="176.0" layoutY="147.0" text="Enregistrer" />
-      <ComboBox fx:id="composantsComboBox" layoutX="524.0" layoutY="47.0" />
+      <ComboBox fx:id="composantsComboBox" layoutX="486.0" layoutY="48.0" />
       <Label layoutX="530.0" layoutY="14.0" text="Composants selectionnés" />
       <Separator layoutX="366.0" layoutY="54.0" orientation="VERTICAL" prefHeight="200.0" />
-      <ListView fx:id="listViewComposants" layoutX="389.0" layoutY="87.0" prefHeight="200.0" prefWidth="426.0" />
+      <ListView fx:id="listViewComposants" layoutX="389.0" layoutY="87.0" prefHeight="200.0" prefWidth="436.0" />
       <Button fx:id="annulerButton" layoutX="14.0" layoutY="261.0" text="Annuler" />
-      <Button fx:id="btnAjouterProduit" layoutX="744.0" layoutY="46.0" text="Ajouter" />
+      <Button fx:id="btnAjouterProduit" layoutX="755.0" layoutY="46.0" text="Ajouter" />
     </children>
 </AnchorPane>

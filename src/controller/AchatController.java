@@ -21,6 +21,7 @@ import javafx.util.Callback;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -127,14 +128,22 @@ public class AchatController {
                 int numero = rs.getInt("numero");
                 String composantsString = rs.getString("composants");
                 List<String> composants = new ArrayList<>();
+                
                 if (composantsString != null && !composantsString.isEmpty()) {
                     String[] composantsArray = composantsString.split(",");
                     for (String composant : composantsArray) {
-                        composants.add(composant.trim());
+                        String[] parts = composant.trim().split("\\(");
+                        if (parts.length == 2) {
+                            int produitId = Integer.parseInt(parts[0]);
+                            String quantite = parts[1].replace(")", "");
+                            
+                            String produitNom = getNomProduitById(produitId);
+                            composants.add(produitNom + "(" + quantite + ")");
+                        }
                     }
                 }
 
-                int prix; 
+                int prix;
                 try {
                     prix = Integer.parseInt(rs.getString("prix"));
                 } catch (NumberFormatException e) {
@@ -155,6 +164,21 @@ public class AchatController {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Erreur SQL", "Une erreur s'est produite lors de la récupération des achats : " + e.getMessage());
         }
+    }
+
+    private String getNomProduitById(int id) {
+        String query = "SELECT produit FROM produits WHERE id = ?";
+        try (PreparedStatement pstmt = connexion.prepareStatement(query)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("produit");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return "Inconnu";
     }
 
     @FXML
