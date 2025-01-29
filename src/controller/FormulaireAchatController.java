@@ -137,17 +137,6 @@ public class FormulaireAchatController {
         prixField.setText(Integer.toString(prixTotal));
     }
 
-    private void reinitialiserFormulaire() {
-        fournisseurComboBox.setDisable(false);
-        fournisseurComboBox.getSelectionModel().clearSelection();
-        composantsComboBox.getItems().clear();
-        listViewComposants.getItems().clear();
-        produitsAjoutes.clear();
-        prixField.clear();
-        numeroField.clear();
-        recupererNumero();
-    }
-
     private void chargerComposantsPourFournisseur(Fournisseur fournisseur) {
         String query = "SELECT id, produit, prix, qte FROM produits WHERE fournisseurId = ? AND qte != 0";
         composantsComboBox.getItems().clear();
@@ -251,12 +240,12 @@ public class FormulaireAchatController {
             insertPs.setInt(1, Integer.parseInt(numero));
             insertPs.setString(2, composants);
             insertPs.setInt(3, Integer.parseInt(prix));
-            insertPs.setInt(4, 0); 
+            insertPs.setInt(4, 1); 
             insertPs.setInt(5, fournisseur.getId());
 
             int rowsAffected = insertPs.executeUpdate();
             if (rowsAffected > 0) {
-                try (FileWriter writer = new FileWriter("StocksRecues.csv")) {
+                try (FileWriter writer = new FileWriter("StocksRecus.csv")) {
                     for (Map.Entry<Integer, Integer> entry : produitQuantiteMap.entrySet()) {
                         int produitId = entry.getKey();  
                         int quantite = entry.getValue();
@@ -281,6 +270,17 @@ public class FormulaireAchatController {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Erreur", "Une erreur est survenue lors de l'enregistrement de l'achat : " + e.getMessage());
         }
+    }
+    
+    private void reinitialiserFormulaire() {
+        fournisseurComboBox.setDisable(false);
+        fournisseurComboBox.getSelectionModel().clearSelection();
+        composantsComboBox.getItems().clear();
+        listViewComposants.getItems().clear();
+        produitsAjoutes.clear();
+        prixField.clear();
+        numeroField.clear();
+        recupererNumero();
     }
 
     private void showAlert(Alert.AlertType alertType, String title, String content) {

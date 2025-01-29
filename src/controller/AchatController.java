@@ -205,8 +205,8 @@ public class AchatController {
 	    FTPService ftpService = new FTPService();
 	    CSV importCSV = new CSV(connexion);
 
-	    String remoteFile = "/CCI/StockManquantAchat.csv";
-	    String localFile = "C:/Users/Eleve/Downloads/StockManquantAchat.csv"; 
+	    String remoteFile = "/CCI/stocks_manquants_achat.csv";
+	    String localFile = "C:/Users/Eleve/Downloads/stocks_manquants_achat.csv"; 
 
 	    String downloadResult = ftpService.downloadCSV(remoteFile, localFile);
 	    if (!downloadResult.contains("succès")) {
